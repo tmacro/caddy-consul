@@ -8,7 +8,6 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/caddyserver/caddy/v2/modules/caddyhttp/headers"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/reverseproxy"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
 	caddyrequestid "github.com/lolPants/caddy-requestid"
@@ -87,12 +86,12 @@ func (cc *App) generateHTTPAndTLSAppConfFromConsulServices(conf *caddy.Config) (
 	}
 
 	// If the authentication is enabled, we need to handle the certificates for the authentication domain too
-	if cc.AutoReverseProxy.AuthenticationConfiguration.Enabled {
-		tlsConf.Automation.Policies = append(tlsConf.Automation.Policies, &caddytls.AutomationPolicy{
-			SubjectsRaw: []string{cc.AutoReverseProxy.AuthenticationConfiguration.AuthenticationDomain},
-			IssuersRaw:  cc.AutoReverseProxy.TLSIssuers,
-		})
-	}
+	// if cc.AutoReverseProxy.AuthenticationConfiguration.Enabled {
+	// 	tlsConf.Automation.Policies = append(tlsConf.Automation.Policies, &caddytls.AutomationPolicy{
+	// 		SubjectsRaw: []string{cc.AutoReverseProxy.AuthenticationConfiguration.AuthenticationDomain},
+	// 		IssuersRaw:  cc.AutoReverseProxy.TLSIssuers,
+	// 	})
+	// }
 
 	// We iterate on every Consul service
 	for _, instances := range services {
@@ -122,13 +121,13 @@ func (cc *App) generateHTTPAndTLSAppConfFromConsulServices(conf *caddy.Config) (
 			FlushInterval:   caddy.Duration(options.FlushInterval),
 			RequestBuffers:  reqBuffer,
 			ResponseBuffers: resBuffer,
-			Headers: &headers.Handler{
-				Request: &headers.HeaderOps{Add: http.Header{}},
-				Response: &headers.RespHeaderOps{
-					Deferred:  true,
-					HeaderOps: &headers.HeaderOps{Add: http.Header{}},
-				},
-			},
+			// Headers: &headers.Handler{
+			// 	Request: &headers.HeaderOps{Add: http.Header{}},
+			// 	Response: &headers.RespHeaderOps{
+			// 		// Deferred:  true,
+			// 		HeaderOps: &headers.HeaderOps{Add: http.Header{}},
+			// 	},
+			// },
 		}
 
 		// If Upstream is HTTPS, then we use HTTPTransport and add the TLS tag (insecure)
