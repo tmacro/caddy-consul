@@ -278,6 +278,11 @@ func (cc *App) watchConsulKV(configChan chan *caddy.Config, shutdownKV chan bool
 
 		conf := &caddy.Config{}
 
+		if keypair == nil {
+			caddy.Log().Named("consul.watcher.kv").Debug("Consul KV key is empty, nothing to do")
+			continue
+		}
+
 		err = json.Unmarshal(keypair.Value, &conf)
 		if err != nil {
 			caddy.Log().Named("consul.watcher.kv").Debug("unable to unmarshal Consul KV content into caddy.Config struct, let's check if it's a caddyfile format")

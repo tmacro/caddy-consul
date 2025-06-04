@@ -11,9 +11,6 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/headers"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/reverseproxy"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
-	"github.com/greenpau/caddy-auth-jwt/pkg/acl"
-	"github.com/greenpau/caddy-auth-jwt/pkg/authz"
-	portal "github.com/greenpau/caddy-auth-portal"
 	caddyrequestid "github.com/lolPants/caddy-requestid"
 )
 
@@ -77,8 +74,7 @@ func (cc *App) generateHTTPAndTLSAppConfFromConsulServices(conf *caddy.Config) (
 				Listen: []string{
 					fmt.Sprintf(":%d", cc.AutoReverseProxy.DefaultHTTPServerOptions.HTTPSPort),
 				},
-				Routes:   caddyhttp.RouteList{cc.getAuthRoute()},
-				AllowH2C: true,
+				Routes: caddyhttp.RouteList{cc.getAuthRoute()},
 			},
 		},
 	}
@@ -93,8 +89,8 @@ func (cc *App) generateHTTPAndTLSAppConfFromConsulServices(conf *caddy.Config) (
 	// If the authentication is enabled, we need to handle the certificates for the authentication domain too
 	if cc.AutoReverseProxy.AuthenticationConfiguration.Enabled {
 		tlsConf.Automation.Policies = append(tlsConf.Automation.Policies, &caddytls.AutomationPolicy{
-			Subjects:   []string{cc.AutoReverseProxy.AuthenticationConfiguration.AuthenticationDomain},
-			IssuersRaw: cc.AutoReverseProxy.TLSIssuers,
+			SubjectsRaw: []string{cc.AutoReverseProxy.AuthenticationConfiguration.AuthenticationDomain},
+			IssuersRaw:  cc.AutoReverseProxy.TLSIssuers,
 		})
 	}
 
@@ -109,13 +105,23 @@ func (cc *App) generateHTTPAndTLSAppConfFromConsulServices(conf *caddy.Config) (
 		// We compute the upstreams and options requested from the service's instances
 		upstreams, options := parseConsulService(instances)
 
+		var reqBuffer int64
+		var resBuffer int64
+
+		if options.BufferRequests {
+			reqBuffer = int64(options.MaxBufferSize)
+		}
+
+		if options.BufferResponses {
+			resBuffer = int64(options.MaxBufferSize)
+		}
+
 		// Let's start by instantiating the reverse-proxy handler
 		reverseProxyHandler := &reverseproxy.Handler{
 			Upstreams:       upstreams,
 			FlushInterval:   caddy.Duration(options.FlushInterval),
-			BufferRequests:  options.BufferRequests,
-			BufferResponses: options.BufferResponses,
-			MaxBufferSize:   int64(options.MaxBufferSize),
+			RequestBuffers:  reqBuffer,
+			ResponseBuffers: resBuffer,
 			Headers: &headers.Handler{
 				Request: &headers.HeaderOps{Add: http.Header{}},
 				Response: &headers.RespHeaderOps{
@@ -207,8 +213,8 @@ func (cc *App) generateHTTPAndTLSAppConfFromConsulServices(conf *caddy.Config) (
 
 		// Let's prepare the TLS app part for this website
 		tlsConf.Automation.Policies = append(tlsConf.Automation.Policies, &caddytls.AutomationPolicy{
-			Subjects:   hostnames,
-			IssuersRaw: cc.AutoReverseProxy.TLSIssuers,
+			SubjectsRaw: hostnames,
+			IssuersRaw:  cc.AutoReverseProxy.TLSIssuers,
 		})
 
 		// And now, let's build the handlers!
@@ -270,60 +276,60 @@ func (cc *App) generateHTTPAndTLSAppConfFromConsulServices(conf *caddy.Config) (
 // plugin.
 func (cc *App) getAuthRoute() (route caddyhttp.Route) {
 
-	if !cc.AutoReverseProxy.AuthenticationConfiguration.Enabled {
-		return
-	}
+	// if !cc.AutoReverseProxy.AuthenticationConfiguration.Enabled {
+	// 	return
+	// }
 
-	authMiddleware := &portal.AuthMiddleware{
-		Portal: &cc.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration,
-	}
-	defaultAuthHandler := NewAuthenticationHandler(fmt.Sprintf(
-		"https://%s/auth",
-		cc.AutoReverseProxy.AuthenticationConfiguration.AuthenticationDomain,
-	))
-	defaultAuthHandler.Providers.JWT.Authorizer = authz.Authorizer{
-		AuthURLPath: fmt.Sprintf(
-			"https://%s/auth",
-			cc.AutoReverseProxy.AuthenticationConfiguration.AuthenticationDomain,
-		),
-		PrimaryInstance:       true,
-		PassClaimsWithHeaders: true,
-		CryptoKeyConfigs:      cc.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.CryptoKeyConfigs,
-		AccessListRules: []*acl.RuleConfiguration{
-			{
-				Conditions: []string{"always match roles any"},
-				Action:     "allow",
-			},
-		},
-	}
+	// authMiddleware := &portal.AuthMiddleware{
+	// 	Portal: &cc.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration,
+	// }
+	// defaultAuthHandler := NewAuthenticationHandler(fmt.Sprintf(
+	// 	"https://%s/auth",
+	// 	cc.AutoReverseProxy.AuthenticationConfiguration.AuthenticationDomain,
+	// ))
+	// defaultAuthHandler.Providers.JWT.Authorizer = authz.Authorizer{
+	// 	AuthURLPath: fmt.Sprintf(
+	// 		"https://%s/auth",
+	// 		cc.AutoReverseProxy.AuthenticationConfiguration.AuthenticationDomain,
+	// 	),
+	// 	PrimaryInstance:       true,
+	// 	PassClaimsWithHeaders: true,
+	// 	CryptoKeyConfigs:      cc.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.CryptoKeyConfigs,
+	// 	AccessListRules: []*acl.RuleConfiguration{
+	// 		{
+	// 			Conditions: []string{"always match roles any"},
+	// 			Action:     "allow",
+	// 		},
+	// 	},
+	// }
 
-	subRouteHandler := &caddyhttp.Subroute{
-		Routes: caddyhttp.RouteList{
-			caddyhttp.Route{
-				Terminal: true,
-				MatcherSetsRaw: caddyhttp.RawMatcherSets{
-					caddy.ModuleMap{
-						"path_regexp": caddyconfig.JSON(caddyhttp.MatchPathRE{MatchRegexp: caddyhttp.MatchRegexp{Pattern: fmt.Sprintf("/auth*")}}, nil),
-					},
-				},
-				HandlersRaw: []json.RawMessage{
-					caddyconfig.JSONModuleObject(authMiddleware, "handler", "authp", nil),
-				},
-			},
-			caddyhttp.Route{
-				HandlersRaw: []json.RawMessage{caddyconfig.JSON(defaultAuthHandler, nil)},
-			},
-		},
-	}
+	// subRouteHandler := &caddyhttp.Subroute{
+	// 	Routes: caddyhttp.RouteList{
+	// 		caddyhttp.Route{
+	// 			Terminal: true,
+	// 			MatcherSetsRaw: caddyhttp.RawMatcherSets{
+	// 				caddy.ModuleMap{
+	// 					"path_regexp": caddyconfig.JSON(caddyhttp.MatchPathRE{MatchRegexp: caddyhttp.MatchRegexp{Pattern: fmt.Sprintf("/auth*")}}, nil),
+	// 				},
+	// 			},
+	// 			HandlersRaw: []json.RawMessage{
+	// 				caddyconfig.JSONModuleObject(authMiddleware, "handler", "authp", nil),
+	// 			},
+	// 		},
+	// 		caddyhttp.Route{
+	// 			HandlersRaw: []json.RawMessage{caddyconfig.JSON(defaultAuthHandler, nil)},
+	// 		},
+	// 	},
+	// }
 
-	route = caddyhttp.Route{
-		MatcherSetsRaw: caddyhttp.RawMatcherSets{
-			caddy.ModuleMap{
-				"host": caddyconfig.JSON([]string{cc.AutoReverseProxy.AuthenticationConfiguration.AuthenticationDomain}, nil),
-			},
-		},
-		HandlersRaw: []json.RawMessage{caddyconfig.JSONModuleObject(subRouteHandler, "handler", "subroute", nil)},
-	}
+	// route = caddyhttp.Route{
+	// 	MatcherSetsRaw: caddyhttp.RawMatcherSets{
+	// 		caddy.ModuleMap{
+	// 			"host": caddyconfig.JSON([]string{cc.AutoReverseProxy.AuthenticationConfiguration.AuthenticationDomain}, nil),
+	// 		},
+	// 	},
+	// 	HandlersRaw: []json.RawMessage{caddyconfig.JSONModuleObject(subRouteHandler, "handler", "subroute", nil)},
+	// }
 
 	return
 }

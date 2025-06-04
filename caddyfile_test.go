@@ -8,8 +8,6 @@ import (
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
-	"github.com/greenpau/caddy-auth-portal/pkg/authn"
-	"github.com/greenpau/caddy-auth-portal/pkg/cookie"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,10 +29,10 @@ func TestParseCaddyfile(t *testing.T) {
 					Scheme:  "http",
 				},
 				AutoReverseProxy: &AutoReverseProxyOptions{
-					TLSIssuers:               []json.RawMessage{},
-					DefaultHTTPServerOptions: &DefaultHTTPServerOptions{},
+					TLSIssuers:                  []json.RawMessage{},
+					DefaultHTTPServerOptions:    &DefaultHTTPServerOptions{},
 					AuthenticationConfiguration: &AuthenticationConfiguration{
-						AuthPortalConfiguration: authn.Authenticator{},
+						// AuthPortalConfiguration: authn.Authenticator{},
 					},
 				},
 			},
@@ -74,11 +72,11 @@ func TestParseCaddyfile(t *testing.T) {
 						CustomClaimsHeaders: map[string]string{
 							"x-token-user-email": "X-MYCOMPANY-USER",
 						},
-						AuthPortalConfiguration: authn.Authenticator{
-							CookieConfig: &cookie.Config{
-								Domain: "my-awesome-domain.io",
-							},
-						},
+						// AuthPortalConfiguration: authn.Authenticator{
+						// 	CookieConfig: &cookie.Config{
+						// 		Domain: "my-awesome-domain.io",
+						// 	},
+						// },
 					},
 				},
 			},
@@ -111,8 +109,8 @@ func TestParseCaddyfile(t *testing.T) {
 			require.Equal(t, tc.expectedApp.AutoReverseProxy.AuthenticationConfiguration.Enabled, app.AutoReverseProxy.AuthenticationConfiguration.Enabled, "unexpected auto_reverse_proxy.authentication_configuration.enabled")
 			require.Equal(t, tc.expectedApp.AutoReverseProxy.AuthenticationConfiguration.AuthenticationDomain, app.AutoReverseProxy.AuthenticationConfiguration.AuthenticationDomain, "unexpected auto_reverse_proxy.authentication_configuration.authentication_domain")
 			require.Equal(t, tc.expectedApp.AutoReverseProxy.AuthenticationConfiguration.CustomClaimsHeaders, app.AutoReverseProxy.AuthenticationConfiguration.CustomClaimsHeaders, "unexpected auto_reverse_proxy.authentication_configuration.custom_claims_headers")
-			require.Equal(t, tc.expectedApp.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.BackendConfigs, app.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.BackendConfigs, "unexpected auto_reverse_proxy.authentication_configuration.authp.backends")
-			require.Equal(t, tc.expectedApp.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.CookieConfig, app.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.CookieConfig, "unexpected auto_reverse_proxy.authentication_configuration.authp.cookie domain")
+			// require.Equal(t, tc.expectedApp.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.BackendConfigs, app.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.BackendConfigs, "unexpected auto_reverse_proxy.authentication_configuration.authp.backends")
+			// require.Equal(t, tc.expectedApp.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.CookieConfig, app.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.CookieConfig, "unexpected auto_reverse_proxy.authentication_configuration.authp.cookie domain")
 
 			// Specific TLS issuers part, as input is []json.RawMessage
 			require.Equal(t, len(tc.expectedApp.AutoReverseProxy.TLSIssuers), len(app.AutoReverseProxy.TLSIssuers), "unexpected quantity of auto_reverse_proxy.tls_issuers")

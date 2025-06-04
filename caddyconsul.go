@@ -10,8 +10,6 @@ import (
 	"github.com/hashicorp/consul/api"
 	"github.com/pkg/errors"
 
-	_ "github.com/greenpau/caddy-auth-jwt"
-	_ "github.com/greenpau/caddy-auth-portal"
 	_ "github.com/lolPants/caddy-requestid"
 )
 
@@ -179,15 +177,15 @@ func (cc *App) Validate() error {
 			return logAndReturn(ErrMissingAuthenticationConfigurationAuthenticationDomain)
 		}
 
-		// If we handle authentication, we need to have some backend configs
-		if len(cc.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.BackendConfigs) == 0 {
-			return logAndReturn(ErrMissingAuthenticationConfigurationAuthPortalConfigurationBackendConfigs)
-		}
+		// // If we handle authentication, we need to have some backend configs
+		// if len(cc.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.BackendConfigs) == 0 {
+		// 	return logAndReturn(ErrMissingAuthenticationConfigurationAuthPortalConfigurationBackendConfigs)
+		// }
 
-		// If we handle authentication, we need to have a domain for the cookie
-		if cc.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.CookieConfig.Domain == "" {
-			return logAndReturn(ErrMissingAuthenticationConfigurationAuthPortalConfigurationCookieConfigDomain)
-		}
+		// // If we handle authentication, we need to have a domain for the cookie
+		// if cc.AutoReverseProxy.AuthenticationConfiguration.AuthPortalConfiguration.CookieConfig.Domain == "" {
+		// 	return logAndReturn(ErrMissingAuthenticationConfigurationAuthPortalConfigurationCookieConfigDomain)
+		// }
 	}
 
 	caddy.Log().Named("consul").Info("App validated")

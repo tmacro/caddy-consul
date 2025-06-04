@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	caddyauthjwtauth "github.com/greenpau/caddy-auth-jwt/pkg/authz"
-	caddyauthportalauthn "github.com/greenpau/caddy-auth-portal/pkg/authn"
 	"github.com/hashicorp/consul/api"
 )
 
@@ -85,7 +84,7 @@ type AuthenticationConfiguration struct {
 
 	// AuthPortalConfiguration is a perfect embedding
 	// of caddy-auth-portal's configuration
-	AuthPortalConfiguration caddyauthportalauthn.Authenticator `json:"authp"`
+	// AuthPortalConfiguration caddyauthportalauthn.Authenticator `json:"authp"`
 }
 
 // SubdomainReverseProxyOptions describes the supported option tags
